@@ -40,7 +40,7 @@ function New-Content($dir, $folderName, $baseFullPath, $targetFileName, $PREFIX)
   # 探索中のディレクトリ内のディレクトリを検索
   $dirs = Get-ChildItem -Path $dir.FullName -Directory
   ForEach ($directory in $dirs) {
-    $dirName = $PREFIX + $directory.name
+    $dirName = $PREFIX + '_' + $directory.Name
     $dirName = $dirName -Replace '\s+', '_'
     $content += "|" + ($directory.Name -Replace "\.md", '')
     $content += "|"
@@ -61,13 +61,16 @@ function Remove-ExistFile($file) {
 
 function Remove-BaseFile($file) {
   $firstLine = Get-Content -Path $file -TotalCount 1 -Encoding UTF8
-  if ($firstLine -eq "|ファイル名|更新日時|Link|") {
+  if (
+    $firstLine.contains("|") -and 
+  $firstLine.contains("ファイル名") -and 
+  $firstLine.contains("更新日時") -and 
+  $firstLine.Contains("Link")) {
     Remove-ExistFile($file)
   }
 }
 
 # 主処理
-$PREFIX = "00_BASE_"
 $path = Get-Location
 $baseFullPath = $path.Path
 [System.IO.DirectoryInfo[]] $dirs = Get-ChildItem $Path -Recurse -Directory
@@ -80,12 +83,14 @@ foreach ($dir in $dirs) {
   foreach ($file in $dir.GetFiles()) {
     Remove-BaseFile($file.FullName)
   }
+  $PREFIX = ($dirName).Replace($baseFullPath, '') -Replace '\\', '_'
+  $PREFIX = $PREFIX -Replace '\s+', '_'
   # Baseファイルの形式でマークダウンファイルを生成する
   # Baseファイルが存在しない場合ファイルを作成する
   # フォルダの名前のスペースをアンダーバーに変換したもの
   $folderName = (Split-Path $dirName -Leaf) -Replace '\s+', '_'
   # 作成対象のmdファイル名
-  $targetFileName = "${dirName}\${PREFIX}${folderName}.md"
+  $targetFileName = "${dirName}\${PREFIX}.md"
   # 一時テキストファイル名
   $targetTmpFileName = "${dirName}\${folderName}.txt"
 
